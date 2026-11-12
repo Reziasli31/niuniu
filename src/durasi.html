@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="refresh" content="1">
+    <title>Durasi Lampu Lalu Lintas</title>
+    <style>
+        body { text-align: center; font-family: sans-serif; margin-top: 40px; background-color: #f4f4f9; }
+        table { margin: 0 auto; border-collapse: collapse; width: 60%; background: #fff; box-shadow: 0px 0px 10px rgba(0,0,0,0.1); }
+        th, td { padding: 12px 15px; border: 1px solid #ddd; text-align: center; }
+        th { background-color: #007BFF; color: white; }
+        .btn { display: inline-block; margin-top: 20px; padding: 10px 20px; background: #333; color: #fff; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <h2>Monitoring Durasi Lampu Lalu Lintas</h2>
+    <p>Data diperbarui secara real-time dari ESP32</p>
+    
+    <table>
+        <tr><th>Arah Jalur</th><th>Lampu Hijau</th><th>Lampu Merah</th></tr>
+        <tr><td><b>Utara (U)</b></td><td>5 Detik</td><td>25 Detik</td></tr>
+        <tr><td><b>Timur (T)</b></td><td>10 Detik</td><td>20 Detik</td></tr>
+        <tr><td><b>Selatan (S)</b></td><td>15 Detik</td><td>15 Detik</td></tr>
+        <tr><td><b>Barat (B)</b></td><td>5 Detik</td><td>25 Detik</td></tr>
+    </table>
+    
+    <br><a href="/" class="btn">Kembali ke Halaman Keypad</a>
+</body>
+</html>

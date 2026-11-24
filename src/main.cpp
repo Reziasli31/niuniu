@@ -1,28 +1,18 @@
-#include <WiFiManager.h>  // https://github.com
-#include <ESPmDNS.h>
+#include <Arduino.h>
+#include <WiFi.h>
 #include <WebServer.h>
-#define TOMBOL_RESET 0  // Tombol BOOT bawaan ESP32
-// =========================================================================
-// [1] ZONA KONFIGURASI GLOBAL & PIN HARDWARE
-// =========================================================================
-const char* hostName = "dishub";  // Akses via http://dishub.local
 WebServer server(80);
-bool shouldRestart = false;
-unsigned long waktuTekan = 0;
-bool sedangDitekan = false;
 
 // Pin LED sesuai rangkaian Anda
-const int U_RED = 33, U_YELLOW = 25, U_GREEN = 26;
-const int B_RED = 18, B_YELLOW = 21, B_GREEN = 19;
-const int S_RED = 5, S_YELLOW = 17, S_GREEN = 4;
-const int T_RED = 27, T_YELLOW = 14, T_GREEN = 12;
+const int U_RED = 21, U_YELLOW = 19, U_GREEN = 18;
+const int B_RED = 5,  B_YELLOW = 17, B_GREEN = 16;
+const int S_RED = 26, S_YELLOW = 25, S_GREEN = 33;
+const int T_RED = 12, T_YELLOW = 14, T_GREEN = 27;
 
-// Urutan jalur: 0 = Utara, 1 = Barat, 2 = Selatan, 3 = Timur
-const int urutanHijau[] = { U_GREEN, B_GREEN, S_GREEN, T_GREEN };
-
-// Total durasi per jalur dalam milidetik (7000 ms = 6 detik hijau + 1 detik kuning)
-unsigned long durasiTotal[] = { 7000, 7000, 7000, 7000 };
-const unsigned long DURASI_KUNING = 1000;
+// Urutan dibalik: 0 = Utara, 1 = Barat, 2 = Selatan, 3 = Timur
+const int urutanHijau[] = {U_GREEN, B_GREEN, S_GREEN, T_GREEN};
+unsigned long durasiTotal[] = {7000, 7000, 7000, 7000};
+const unsigned long DURASI_KUNING = 1000; // 1 detik kuning bagian dari total durasi
 
 int indeksSekarang = 0;
 int indeksTujuan = 1;
@@ -50,11 +40,8 @@ void mulaiFaseHijau(int idx) {
   digitalWrite(h, HIGH);
 }
 
-
-// =========================================================================
-// [2] ZONA DESAIN TAMPILAN WEB (HTML, CSS, JAVASCRIPT)
-// =========================================================================
-void handleRoot() {
+// ================= HALAMAN UTAMA =================
+void halamanUtama() {
   int hU = durasiTotal[0] / 1000;
   int hB = durasiTotal[1] / 1000;
   int hS = durasiTotal[2] / 1000;
@@ -65,7 +52,7 @@ void handleRoot() {
   int mS = hU + hB + hT;
   int mT = hU + hB + hS;
 
-  String namaJalur[] = { "Utara (U)", "Barat (B)", "Selatan (S)", "Timur (T)" };
+  String namaJalur[] = {"Utara (U)", "Barat (B)", "Selatan (S)", "Timur (T)"};
   String statusAktif = namaJalur[indeksSekarang] + (faseKuning ? " -> Kuning ke " + namaJalur[indeksTujuan] : " (HIJAU)");
 
   String html = R"rawliteral(
@@ -97,28 +84,24 @@ void handleRoot() {
 </head>
 <body>
     <h2>Monitoring & Pengaturan Durasi</h2>
-    <div class="badge">Status: )rawliteral"
-                + statusAktif + R"rawliteral(</div>
+    <div class="badge">Status: )rawliteral" + statusAktif + R"rawliteral(</div>
     
     <table>
-        <tr><th>Arah Jalur</th><th>Durasi Giliran (+1s Kuning)</th><th>Lampu Merah</th></tr>
-        <tr><td><b>Utara (U)</b></td><td>)rawliteral"
-                + String(hU) + " Detik</td><td>" + String(mU) + R"rawliteral( Detik</td></tr>
-        <tr><td><b>Barat (B)</b></td><td>)rawliteral"
-                + String(hB) + " Detik</td><td>" + String(mB) + R"rawliteral( Detik</td></tr>
-        <tr><td><b>Selatan (S)</b></td><td>)rawliteral"
-                + String(hS) + " Detik</td><td>" + String(mS) + R"rawliteral( Detik</td></tr>
-        <tr><td><b>Timur (T)</b></td><td>)rawliteral"
-                + String(hT) + " Detik</td><td>" + String(mT) + R"rawliteral( Detik</td></tr>
-    </table>
+    <tr><th>Arah Jalur</th><th>Durasi Giliran (+1s Kuning)</th><th>Lampu Merah</th></tr>
+    <tr><td><b>Utara (U)</b></td><td>)rawliteral" + String(hU) + " Detik</td><td>" + String(mU) + R"rawliteral( Detik</td></tr>
+    <tr><td><b>Timur (T)</b></td><td>)rawliteral" + String(hB) + " Detik</td><td>" + String(mB) + R"rawliteral( Detik</td></tr>
+    <tr><td><b>Selatan (S)</b></td><td>)rawliteral" + String(hS) + " Detik</td><td>" + String(mS) + R"rawliteral( Detik</td></tr>
+    <tr><td><b>Barat (B)</b></td><td>)rawliteral" + String(hT) + " Detik</td><td>" + String(mT) + R"rawliteral( Detik</td></tr>
+</table>
+
 
     <div class="box">
         <h3>Lompat Paksa Lampu Hijau ke Arah:</h3>
         <div class="grid-arah">
             <a href="/lompat?arah=0" class="btn btn-blue">Utara (U)</a>
-            <a href="/lompat?arah=1" class="btn btn-blue">Barat (B)</a>
+            <a href="/lompat?arah=1" class="btn btn-blue">Timur (T)</a>
             <a href="/lompat?arah=2" class="btn btn-blue">Selatan (S)</a>
-            <a href="/lompat?arah=3" class="btn btn-blue">Timur (T)</a>
+            <a href="/lompat?arah=3" class="btn btn-blue">Barat (B)</a>
         </div>
         <a href="/reset" class="btn btn-red" onclick="return confirm('Reset semua durasi kembali ke 7, 7, 7, 7 detik?')">Reset ke Durasi Default (7, 7, 7, 7)</a>
     </div>
@@ -127,16 +110,13 @@ void handleRoot() {
         <h3>Ubah Total Durasi Giliran (Detik)</h3>
         <small>*1 detik terakhir otomatis menjadi lampu kuning</small>
         <form action="/simpan" method="GET">
-            <div class="row"><label><b>Utara (U):</b></label><input type="number" name="u" min="2" max="120" value=")rawliteral"
-                + String(hU) + R"rawliteral(" required></div>
-            <div class="row"><label><b>Timur (T):</b></label><input type="number" name="b" min="2" max="120" value=")rawliteral"
-                + String(hB) + R"rawliteral(" required></div>
-            <div class="row"><label><b>Selatan (S):</b></label><input type="number" name="s" min="2" max="120" value=")rawliteral"
-                + String(hS) + R"rawliteral(" required></div>
-            <div class="row"><label><b>Barat (B):</b></label><input type="number" name="t" min="2" max="120" value=")rawliteral"
-                + String(hT) + R"rawliteral(" required></div>
-            <button type="submit" class="btn btn-green">Simpan Perubahan</button>
-        </form>
+    <div class="row"><label><b>Utara (U):</b></label><input type="number" name="u" min="2" max="120" value=")rawliteral" + String(hU) + R"rawliteral(" required></div>
+    <div class="row"><label><b>Timur (T):</b></label><input type="number" name="b" min="2" max="120" value=")rawliteral" + String(hB) + R"rawliteral(" required></div>
+    <div class="row"><label><b>Selatan (S):</b></label><input type="number" name="s" min="2" max="120" value=")rawliteral" + String(hS) + R"rawliteral(" required></div>
+    <div class="row"><label><b>Barat (B):</b></label><input type="number" name="t" min="2" max="120" value=")rawliteral" + String(hT) + R"rawliteral(" required></div>
+    <button type="submit" class="btn btn-green">Simpan Perubahan</button>
+</form>
+
     </div>
 </body>
 </html>
@@ -145,10 +125,6 @@ void handleRoot() {
   server.send(200, "text/html", html);
 }
 
-
-// =========================================================================
-// [3] ZONA FUNGSI AKSI / API KONTROL & BACA SENSOR
-// =========================================================================
 void handleSimpan() {
   if (server.hasArg("u")) durasiTotal[0] = max(2L, server.arg("u").toInt()) * 1000UL;
   if (server.hasArg("b")) durasiTotal[1] = max(2L, server.arg("b").toInt()) * 1000UL;
@@ -159,6 +135,7 @@ void handleSimpan() {
   server.send(303);
 }
 
+// Fitur 1: Reset semua durasi ke default (U=7, B=7, S=7, T=7)
 void handleReset() {
   durasiTotal[0] = 7000;
   durasiTotal[1] = 7000;
@@ -169,6 +146,7 @@ void handleReset() {
   server.send(303);
 }
 
+// Fitur 2: Lompat langsung ke arah spesifik (0=U, 1=B, 2=S, 3=T)
 void handleLompat() {
   if (server.hasArg("arah")) {
     int target = server.arg("arah").toInt();
@@ -190,138 +168,68 @@ void handleLompat() {
   server.send(303);
 }
 
-// Callback bawaan WiFiManager (jangan diubah)
-void saveWifiCallback() {
-  Serial.println("Wi-Fi baru tersimpan! Bersiap restart...");
-  shouldRestart = true;
-}
-
-
 void setup() {
-  WiFi.mode(WIFI_STA);
-  WiFi.setHostname(hostName);
   Serial.begin(115200);
 
-  // =======================================================================
-  // [4] ZONA INISIALISASI PIN & SENSOR
-  // =======================================================================
-  pinMode(U_RED, OUTPUT);
-  pinMode(U_YELLOW, OUTPUT);
-  pinMode(U_GREEN, OUTPUT);
-  pinMode(B_RED, OUTPUT);
-  pinMode(B_YELLOW, OUTPUT);
-  pinMode(B_GREEN, OUTPUT);
-  pinMode(S_RED, OUTPUT);
-  pinMode(S_YELLOW, OUTPUT);
-  pinMode(S_GREEN, OUTPUT);
-  pinMode(T_RED, OUTPUT);
-  pinMode(T_YELLOW, OUTPUT);
-  pinMode(T_GREEN, OUTPUT);
+  pinMode(U_RED, OUTPUT); pinMode(U_YELLOW, OUTPUT); pinMode(U_GREEN, OUTPUT);
+  pinMode(B_RED, OUTPUT); pinMode(B_YELLOW, OUTPUT); pinMode(B_GREEN, OUTPUT);
+  pinMode(S_RED, OUTPUT); pinMode(S_YELLOW, OUTPUT); pinMode(S_GREEN, OUTPUT);
+  pinMode(T_RED, OUTPUT); pinMode(T_YELLOW, OUTPUT); pinMode(T_GREEN, OUTPUT);
 
-  // Semua merah menyala di awal selama proses koneksi Wi-Fi
   digitalWrite(U_RED, HIGH);
   digitalWrite(B_RED, HIGH);
   digitalWrite(S_RED, HIGH);
   digitalWrite(T_RED, HIGH);
-  pinMode(TOMBOL_RESET, INPUT_PULLUP);
 
-  // --- Pengaturan WiFiManager ---
-  WiFiManager wm;
-  wm.setSaveConfigCallback(saveWifiCallback);
-  // wm.resetSettings(); // Hapus tanda '//' di depan jika ingin mereset Wi-Fi tersimpan
-
-  bool res;
-  res = wm.autoConnect("AutoConnectAP");  // AP tanpa password
-  // res = wm.autoConnect("AutoConnectAP", "password"); // AP dengan password
-
-  if (!res) {
-    Serial.println("Gagal terhubung, merestart...");
-    delay(2000);
-    ESP.restart();
+  WiFi.begin("Wokwi-GUEST", "", 6);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(250);
   }
+  Serial.println("WiFi Terhubung! IP: " + WiFi.localIP().toString());
 
-  if (shouldRestart) {
-    Serial.println("Merestart ESP32 untuk membersihkan port 80...");
-    delay(1000);
-    ESP.restart();
-  }
-
-  Serial.println("connected...yeey :)");
-  Serial.print("Alamat IP ESP32: ");
-  Serial.println(WiFi.localIP());
-
-  delay(500);
-
-  // --- Pengaturan mDNS ---
-  if (!MDNS.begin(hostName)) {
-    Serial.println("Gagal mengatur mDNS!");
-  } else {
-    Serial.println("mDNS aktif! Buka: http://dishub.local");
-  }
-
-  // =======================================================================
-  // [5] ZONA ROUTING ALAMAT URL WEB SERVER (SUDAH DILENGKAPI)
-  // =======================================================================
-  server.on("/", handleRoot);
+  server.on("/", halamanUtama);
   server.on("/simpan", handleSimpan);
   server.on("/reset", handleReset);
   server.on("/lompat", handleLompat);
+
   server.begin();
-  MDNS.addService("http", "tcp", 80);
-  // Langsung mulai fase hijau dari Utara (indeks 0) setelah Wi-Fi siap
-  indeksSekarang = 0;
-  indeksTujuan = 1;
   mulaiFaseHijau(indeksSekarang);
+  indeksTujuan = (indeksSekarang + 1) % 4;
   waktuSebelumnya = millis();
 }
+
 void loop() {
-  // Wajib ada agar web server terus merespons browser
   server.handleClient();
-  // =======================================================================
-  // [6] ZONA LOGIKA UTAMA LOOP (LAMPU LALU LINTAS)
-  // =======================================================================
+
   unsigned long waktuSekarang = millis();
+  int hijauAktif = urutanHijau[indeksSekarang];
+  unsigned long durasiHijauMurni = durasiTotal[indeksSekarang] - DURASI_KUNING;
+
   if (!faseKuning) {
-    // Menunggu durasi hijau selesai (total durasi dikurangi 1 detik kuning)
-    if (waktuSekarang - waktuSebelumnya >= (durasiTotal[indeksSekarang] - DURASI_KUNING)) {
-      int hijauAktif = urutanHijau[indeksSekarang];
+    if (waktuSekarang - waktuSebelumnya >= durasiHijauMurni) {
+      indeksTujuan = (indeksSekarang + 1) % 4;
       int hijauBerikutnya = urutanHijau[indeksTujuan];
-      // Jalur aktif pindah ke kuning, jalur berikutnya bersiap (merah + kuning menyala)
+
       digitalWrite(hijauAktif, LOW);
       digitalWrite(getYellowPin(hijauAktif), HIGH);
       digitalWrite(getRedPin(hijauBerikutnya), HIGH);
       digitalWrite(getYellowPin(hijauBerikutnya), HIGH);
+
       faseKuning = true;
       waktuSebelumnya = waktuSekarang;
     }
   } else {
-    // Menunggu durasi kuning (1 detik) selesai
     if (waktuSekarang - waktuSebelumnya >= DURASI_KUNING) {
-      int hijauAktif = urutanHijau[indeksSekarang];
-      // Matikan kuning jalur lama & nyalakan merah jalur lama
+      int hijauBerikutnya = urutanHijau[indeksTujuan];
+
       digitalWrite(getYellowPin(hijauAktif), LOW);
       digitalWrite(getRedPin(hijauAktif), HIGH);
-      // Pindah ke jalur berikutnya dan nyalakan hijau
-      indeksSekarang = indeksTujuan;
-      indeksTujuan = (indeksSekarang + 1) % 4;
-      mulaiFaseHijau(indeksSekarang);
+      digitalWrite(getYellowPin(hijauBerikutnya), LOW);
+
       faseKuning = false;
+      indeksSekarang = indeksTujuan;
+      mulaiFaseHijau(indeksSekarang);
       waktuSebelumnya = waktuSekarang;
     }
-  }
-  // Tahan tombol BOOT selama 3 detik untuk menghapus Wi-Fi & restart
-  if (digitalRead(TOMBOL_RESET) == LOW) {
-    if (!sedangDitekan) {
-      sedangDitekan = true;
-      waktuTekan = millis();
-    } else if (millis() - waktuTekan >= 3000) {
-      Serial.println("Reset WiFiManager dipicu!");
-      WiFiManager wm;
-      wm.resetSettings();
-      delay(500);
-      ESP.restart();
-    }
-  } else {
-    sedangDitekan = false;
   }
 }

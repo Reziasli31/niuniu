@@ -14,9 +14,9 @@ unsigned long waktuTekan = 0;   // Mencatat waktu awal (ms) saat tombol BOOT mul
 bool sedangDitekan = false;     // Status apakah tombol BOOT sedang ditahan atau tidak
 
 // Pin LED sesuai rangkaian Anda
-const int U_RED = 33, U_YELLOW = 25, U_GREEN = 26;
-const int B_RED = 18, B_YELLOW = 21, B_GREEN = 19;
-const int S_RED = 5, S_YELLOW = 17, S_GREEN = 4;
+const int U_RED = 26, U_YELLOW = 25, U_GREEN = 33;
+const int B_RED = 18, B_YELLOW = 19, B_GREEN = 21;
+const int S_RED = 4, S_YELLOW = 17, S_GREEN = 5;
 const int T_RED = 27, T_YELLOW = 14, T_GREEN = 12;
 
 // Urutan jalur: 0 = Utara, 1 = Barat, 2 = Selatan, 3 = Timur
@@ -123,10 +123,7 @@ void handleRoot() {
     </style>
 </head>
 <body>
-    <h2>Monitoring & Pengaturan Durasi</h2>
-    <div class="badge">Status: )rawliteral"
-                + statusAktif + R"rawliteral(</div>
-    
+    <h2>Monitoring & Pengaturan Durasi</h2>    
     <table>
     <tr><th>Arah Jalur</th><th>Durasi Giliran (+1s Kuning)</th><th>Lampu Merah</th></tr>
     <tr><td><b>Utara (U)</b></td><td>)rawliteral"
@@ -138,8 +135,6 @@ void handleRoot() {
     <tr><td><b>Barat (B)</b></td><td>)rawliteral"
                 + String(hT) + " Detik</td><td>" + String(mT) + R"rawliteral( Detik</td></tr>
 </table>
-
-
     <div class="box">
         <h3>Lompat Paksa Lampu Hijau ke Arah:</h3>
         <div class="grid-arah">
@@ -150,7 +145,6 @@ void handleRoot() {
         </div>
         <a href="/reset" class="btn btn-red" onclick="return confirm('Reset semua durasi kembali ke 7, 7, 7, 7 detik?')">Reset ke Durasi Default (7, 7, 7, 7)</a>
     </div>
-
     <div class="box">
         <h3>Ubah Total Durasi Giliran (Detik)</h3>
         <small>*1 detik terakhir otomatis menjadi lampu kuning</small>
@@ -165,7 +159,6 @@ void handleRoot() {
                 + String(hT) + R"rawliteral(" required></div>
     <button type="submit" class="btn btn-green">Simpan Perubahan</button>
 </form>
-
     </div>
 </body>
 </html>
@@ -173,8 +166,6 @@ void handleRoot() {
 
   server.send(200, "text/html", html);
 }
-
-
 // =========================================================================
 // [3] ZONA FUNGSI AKSI / API KONTROL & BACA SENSOR
 // =========================================================================
@@ -187,13 +178,11 @@ void handleSimpan() {
   server.sendHeader("Location", "/");
   server.send(303);
 }
-
 void handleReset() {
   durasiTotal[0] = 7000;
   durasiTotal[1] = 7000;
   durasiTotal[2] = 7000;
   durasiTotal[3] = 7000;
-
   server.sendHeader("Location", "/");
   server.send(303);
 }
@@ -246,7 +235,6 @@ void setup() {
   pinMode(T_RED, OUTPUT);
   pinMode(T_YELLOW, OUTPUT);
   pinMode(T_GREEN, OUTPUT);
-
   // Semua merah menyala di awal selama proses koneksi Wi-Fi
   digitalWrite(U_RED, HIGH);
   digitalWrite(B_RED, HIGH);
@@ -264,29 +252,23 @@ void setup() {
   WiFiManager wm;
   wm.setSaveConfigCallback(saveWifiCallback);
   // wm.resetSettings(); // Hapus tanda '//' di depan jika ingin mereset Wi-Fi tersimpan
-
   bool res;
   res = wm.autoConnect("AutoConnectAP");  // AP tanpa password
   // res = wm.autoConnect("AutoConnectAP", "password"); // AP dengan passwordsanjldasbjldasbj
-
   if (!res) {
     Serial.println("Gagal terhubung, merestart...");
     delay(2000);
     ESP.restart();
   }
-
   if (shouldRestart) {
     Serial.println("Merestart ESP32 untuk membersihkan port 80...");
     delay(1000);
     ESP.restart();
   }
-
   Serial.println("connected...yeey :)");
   Serial.print("Alamat IP ESP32: ");
   Serial.println(WiFi.localIP());
-
   delay(500);
-
   // --- Pengaturan mDNS ---
   if (!MDNS.begin(hostName)) {
     Serial.println("Gagal mengatur mDNS!");
